@@ -1,0 +1,29 @@
+{
+  "name": "tx-scan",
+  "version": "0.1.0",
+  "description": "Analyze Ethereum transactions by fetching semantic trace data and generating a visual HTML explanation of internal calls, token flows, and DeFi actions.",
+  "author": "matrooslabs",
+  "license": "MIT",
+  "categories": ["ethereum", "transactions", "visualization", "defi"],
+  "keywords": ["transaction", "trace", "swap", "transfer", "mev", "internal-tx", "call-tree"],
+  "skills": [
+    {
+      "name": "tx-scan",
+      "trigger": "/tx-scan",
+      "description": "Fetch and visualize an Ethereum transaction's trace tree as an interactive HTML page",
+      "arguments": "<tx_hash>",
+      "tools": ["Bash", "Read", "Write"]
+    }
+  ],
+  "dependencies": {
+    "runtime": ["curl", "jq"],
+    "optional": ["mermaid"]
+  },
+  "config": {
+    "MEVSCAN_API_URL": {
+      "description": "API base URL for the mevscan trace endpoint",
+      "default": "http://localhost:3001",
+      "required": false
+    }
+  }
+}
