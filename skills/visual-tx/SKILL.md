@@ -1,7 +1,7 @@
 ---
 name: visual-tx
 description: Analyze Ethereum transactions by fetching semantic trace data and generating a visual HTML explanation. Use this skill whenever the user provides a transaction hash, asks to analyze a transaction, wants to understand what happened in a tx, or asks about internal calls, token transfers, swaps, or any on-chain activity within a transaction. Trigger on phrases like "scan this tx", "what happened in this transaction", "trace this tx", "explain this transaction", or any 0x-prefixed 66-character hash.
-allowed-tools: Bash(scripts/*), Bash(open *), Bash(xdg-open *), Bash(mkdir *), Read, Write
+allowed-tools: Bash(curl *), Bash(open *), Bash(xdg-open *), Bash(mkdir *), Read, Write
 ---
 
 # Transaction Scanner
@@ -12,13 +12,13 @@ Fetch semantic trace data for an Ethereum transaction and generate a self-contai
 
 ### 1. Fetch the trace tree
 
-Run the query script with the transaction hash from `$ARGUMENTS`:
+Fetch the trace tree JSON using the transaction hash from `$ARGUMENTS`:
 
 ```bash
-./scripts/query_tree.sh <tx_hash>
+curl -sf "${MEVSCAN_API_URL:-http://localhost:3001}/api/tree/<tx_hash>"
 ```
 
-Save the JSON output to a temp file for processing. If the script fails (API unreachable, invalid hash), tell the user and stop.
+Save the JSON output to a temp file for processing. If the request fails (API unreachable, invalid hash), tell the user and stop.
 
 Read `./references/tree-json.md` to understand the JSON schema — it documents every field, action kind, and type you'll encounter.
 
