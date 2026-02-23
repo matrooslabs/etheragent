@@ -1,6 +1,12 @@
-# visual-tx
+# EtherAgent
 
 Analyze Ethereum transactions — fetches semantic trace data and generates an interactive HTML visualization of internal calls, token flows, and DeFi actions.
+
+## Screenshots
+
+![Transaction overview, KPI summary, and call trace](image.png)
+
+![Token flows and address interactions](image2.png)
 
 ## Install
 
@@ -16,11 +22,15 @@ claude --plugin-dir ./path/to/etheragent
 
 ## Usage
 
+**Visual (HTML)** — opens an interactive page in your browser:
 ```
 /visual-tx 0xTRANSACTION_HASH
 ```
 
-Requires `curl` and `jq`. Optionally set `MEVSCAN_API_URL` (defaults to `http://localhost:3001`).
+**Trace (plain text)** — prints an ASCII art breakdown in the terminal:
+```
+/trace-tx 0xTRANSACTION_HASH
+```
 
 ## License
 
