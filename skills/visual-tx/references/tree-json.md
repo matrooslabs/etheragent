@@ -30,25 +30,25 @@ Each node = one EVM call frame.
 ## Action Schemas
 
 ### Swap
-`{ protocol, trace_index, from, recipient, pool, token_in: TokenInfo, token_out: TokenInfo, amount_in: Rational, amount_out: Rational, msg_value }`
+`{ protocol, trace_index, from, recipient, pool, token_in: TokenInfo, token_out: TokenInfo, amount_in: string, amount_out: string, msg_value }`
 
 ### SwapWithFee
-`{ swap: Swap, fee_token: TokenInfo, fee_amount: Rational }`
+`{ swap: Swap, fee_token: TokenInfo, fee_amount: string }`
 
 ### Transfer
-`{ trace_index, from, to, token: TokenInfo, amount: Rational, fee: Rational, msg_value }`
+`{ trace_index, from, to, token: TokenInfo, amount: string, fee: string, msg_value }`
 
 ### EthTransfer
 `{ trace_index, from, to, value: hex_wei, coinbase_transfer: bool }`
 
 ### Mint / Burn / Collect (shared schema)
-`{ protocol, trace_index, from, recipient, pool, token: TokenInfo[], amount: Rational[] }` — `token` and `amount` arrays are parallel
+`{ protocol, trace_index, from, recipient, pool, token: TokenInfo[], amount: string[] }` — `token` and `amount` arrays are parallel
 
 ### FlashLoan
-`{ protocol, trace_index, from, pool, receiver_contract, assets: TokenInfo[], amounts: Rational[], aave_mode: object|null, child_actions: Action[], repayments: Transfer[], fees_paid: Rational[], msg_value }`
+`{ protocol, trace_index, from, pool, receiver_contract, assets: TokenInfo[], amounts: string[], aave_mode: object|null, child_actions: Action[], repayments: Transfer[], fees_paid: string[], msg_value }`
 
 ### Liquidation
-`{ protocol, trace_index, pool, liquidator, debtor, collateral_asset: TokenInfo, debt_asset: TokenInfo, covered_debt: Rational, liquidated_collateral: Rational, msg_value }`
+`{ protocol, trace_index, pool, liquidator, debtor, collateral_asset: TokenInfo, debt_asset: TokenInfo, covered_debt: string, liquidated_collateral: string, msg_value }`
 
 ### Batch
 `{ protocol, trace_index, solver, settlement_contract, user_swaps: Swap[], solver_swaps: Swap[]|null, msg_value }`
@@ -66,4 +66,4 @@ Each node = one EVM call frame.
 
 **TokenInfo**: `{ address, symbol, decimals }`
 
-**Rational** (exact, decimal-adjusted): `{ s: bool (true=positive), n: hex_string (numerator), d: hex_string (denominator) }` — human amount = `n / d`. Values are already divided by `10^decimals`.
+All amount fields (e.g. `amount_in`, `amount_out`, `amount`, `fee`, `covered_debt`, etc.) are **decimal strings** like `"1.523456"` — already human-readable, no conversion needed.

@@ -37,13 +37,7 @@ Recursively walk `trace_tree` → `children`. For each node with a non-null `act
 - The `trace_address` (depth in the call stack)
 - The `action_kind` (Swap, Transfer, EthTransfer, Mint, Burn, etc.)
 - Key fields from the `action` object (addresses, tokens, amounts)
-
-**Rational number conversion:**
-Token amounts use the Rational type `{ s, n, d }`. To get a human-readable number:
-- Parse `n` (hex string) and `d` (hex string) as big integers
-- Result = `n / d` (already decimal-adjusted, no need to divide by 10^decimals again)
-- `s` indicates sign: `true` = positive, `false` = negative
-- Format with appropriate decimal places (up to 6 for most tokens, up to 18 for wei-denominated values)
+- Token amounts are already human-readable decimals — use them directly
 
 **Collect unique addresses:**
 Gather every address that appears as a `from`, `to`, `recipient`, `pool`, `liquidator`, `debtor`, `solver`, `settlement_contract`, or `receiver_contract`. These become the "actors" in the visualization. Shorten addresses to `0x1234...abcd` format for display, with full address in a tooltip or data attribute.
@@ -116,7 +110,7 @@ A data table showing every token movement in the transaction:
 - **Action** — colored badge (Swap, Transfer, Mint, Burn, etc.)
 - **From / To** — shortened addresses
 - **Token** — symbol with small address tooltip
-- **Amount** — human-readable number from Rational conversion
+- **Amount** — human-readable decimal number
 - **Protocol** — if the action has a `protocol` field
 
 For **Swap** actions, show two rows or a combined row: token_in amount → token_out amount.
@@ -201,7 +195,6 @@ When rendering actions, use these display patterns. The **Mermaid Arrow** column
 ## Quality Checks
 
 Before delivering:
-- All Rational amounts render as readable decimals (not raw hex)
 - All addresses display in shortened format with full value accessible
 - Action badges are color-coded consistently
 - Both light and dark themes work
