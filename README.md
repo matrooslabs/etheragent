@@ -1,4 +1,4 @@
-# tx-scan
+# visual-tx
 
 Analyze Ethereum transactions — fetches semantic trace data and generates an interactive HTML visualization of internal calls, token flows, and DeFi actions.
 
@@ -17,7 +17,7 @@ claude --plugin-dir ./path/to/etheragent
 ## Usage
 
 ```
-/tx-scan 0xTRANSACTION_HASH
+/visual-tx 0xTRANSACTION_HASH
 ```
 
 Requires `curl` and `jq`. Optionally set `MEVSCAN_API_URL` (defaults to `http://localhost:3001`).

@@ -1,5 +1,5 @@
 {
-  "name": "tx-scan",
+  "name": "visual-tx",
   "version": "0.1.0",
   "description": "Analyze Ethereum transactions by fetching semantic trace data and generating a visual HTML explanation of internal calls, token flows, and DeFi actions.",
   "author": {

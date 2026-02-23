@@ -1,5 +1,5 @@
 ---
-name: tx-scan
+name: visual-tx
 description: Analyze Ethereum transactions by fetching semantic trace data and generating a visual HTML explanation. Use this skill whenever the user provides a transaction hash, asks to analyze a transaction, wants to understand what happened in a tx, or asks about internal calls, token transfers, swaps, or any on-chain activity within a transaction. Trigger on phrases like "scan this tx", "what happened in this transaction", "trace this tx", "explain this transaction", or any 0x-prefixed 66-character hash.
 allowed-tools: Bash(scripts/*), Bash(open *), Bash(xdg-open *), Bash(mkdir *), Read, Write
 ---
