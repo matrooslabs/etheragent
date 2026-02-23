@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transaction Analysis — Reference Template</title>
+<!--
+  Combined reference template for the visual-tx skill.
+  Demonstrates all UI patterns used in the generated page:
+  - Hero card with tx hash, block, from/to, gas details
+  - KPI summary row (action counts by type)
+  - Nested call trace tree with indented cards and action-kind color coding
+  - Mermaid call trace diagram for complex transactions (20+ nodes)
+  - Token flow data table with sticky header, alternating rows, scroll
+  - Action badges, address shortening, copy-to-clipboard
+  - Collapsible sections, address interaction map
+  - Zoom controls for Mermaid diagrams
+  - Dark-first palette with light theme via prefers-color-scheme
+  - Staggered fade-in, reduced motion respect
+  - Responsive single-column fallback
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============ THEME (dark-first) ============ */
+  :root {
+    --font-body: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    /* Dark theme — deep navy + cyan accents */
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --surface-elevated: #1e293b;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-bright: rgba(255, 255, 255, 0.12);
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+
+    /* Action kind colors */
+    --swap: #22d3ee;
+    --swap-dim: rgba(34, 211, 238, 0.12);
+    --transfer: #4ade80;
+    --transfer-dim: rgba(74, 222, 128, 0.10);
+    --eth-transfer: #a78bfa;
+    --eth-transfer-dim: rgba(167, 139, 250, 0.12);
+    --mint: #34d399;
+    --mint-dim: rgba(52, 211, 153, 0.10);
+    --burn: #fbbf24;
+    --burn-dim: rgba(251, 191, 36, 0.10);
+    --liquidation: #fb7185;
+    --liquidation-dim: rgba(251, 113, 133, 0.10);
+    --flashloan: #c084fc;
+    --flashloan-dim: rgba(192, 132, 252, 0.10);
+    --batch: #818cf8;
+    --batch-dim: rgba(129, 140, 248, 0.10);
+    --unclassified: #94a3b8;
+    --unclassified-dim: rgba(148, 163, 184, 0.08);
+    --revert: #f87171;
+    --revert-dim: rgba(248, 113, 113, 0.10);
+
+    --accent: var(--swap);
+    --accent-dim: var(--swap-dim);
+
+    /* Mermaid node fills */
+    --mmd-swap-fill: #0e3a4a;
+    --mmd-transfer-fill: #0e3a20;
+    --mmd-eth-fill: #2a1f50;
+    --mmd-mint-fill: #0e3a2a;
+    --mmd-burn-fill: #3a2e0e;
+    --mmd-liquidation-fill: #3a1525;
+    --mmd-flashloan-fill: #2a1540;
+    --mmd-batch-fill: #1a1a40;
+    --mmd-unclassified-fill: #1a2030;
+    --mmd-revert-fill: #3a1515;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface2: #f1f5f9;
+      --surface-elevated: #ffffff;
+      --border: rgba(0, 0, 0, 0.07);
+      --border-bright: rgba(0, 0, 0, 0.14);
+      --text: #0f172a;
+      --text-dim: #64748b;
+
+      --swap: #0891b2;
+      --swap-dim: rgba(8, 145, 178, 0.08);
+      --transfer: #16a34a;
+      --transfer-dim: rgba(22, 163, 74, 0.08);
+      --eth-transfer: #7c3aed;
+      --eth-transfer-dim: rgba(124, 58, 237, 0.08);
+      --mint: #059669;
+      --mint-dim: rgba(5, 150, 105, 0.08);
+      --burn: #d97706;
+      --burn-dim: rgba(217, 119, 6, 0.08);
+      --liquidation: #e11d48;
+      --liquidation-dim: rgba(225, 29, 72, 0.08);
+      --flashloan: #9333ea;
+      --flashloan-dim: rgba(147, 51, 234, 0.08);
+      --batch: #4f46e5;
+      --batch-dim: rgba(79, 70, 229, 0.08);
+      --unclassified: #64748b;
+      --unclassified-dim: rgba(100, 116, 139, 0.06);
+      --revert: #dc2626;
+      --revert-dim: rgba(220, 38, 38, 0.08);
+
+      --accent: var(--swap);
+      --accent-dim: var(--swap-dim);
+
+      --mmd-swap-fill: #e0f7fa;
+      --mmd-transfer-fill: #e8f5e9;
+      --mmd-eth-fill: #ede7f6;
+      --mmd-mint-fill: #e0f2f1;
+      --mmd-burn-fill: #fff8e1;
+      --mmd-liquidation-fill: #fce4ec;
+      --mmd-flashloan-fill: #f3e5f5;
+      --mmd-batch-fill: #e8eaf6;
+      --mmd-unclassified-fill: #eceff1;
+      --mmd-revert-fill: #ffebee;
+    }
+  }
+
+  /* ============ RESET + BASE ============ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 20% 0%, var(--swap-dim) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, var(--eth-transfer-dim) 0%, transparent 40%);
+    color: var(--text);
+    font-family: var(--font-body);
+    padding: 40px;
+    min-height: 100vh;
+  }
+
+  /* ============ ANIMATION ============ */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate {
+    animation: fadeUp 0.4s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.06s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .mermaid-wrap .mermaid { transition: none; }
+  }
+
+  /* ============ LAYOUT ============ */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    gap: 20px;
+  }
+
+  /* ============ TYPOGRAPHY ============ */
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    margin-bottom: 28px;
+  }
+
+  /* ============ HERO CARD (TX OVERVIEW) ============ */
+  .hero {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    padding: 28px 32px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .hero-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hero-label .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .tx-hash-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .tx-hash {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+    word-break: break-all;
+  }
+
+  .copy-btn {
+    background: var(--accent-dim);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+
+  .copy-btn:hover { background: var(--border); }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+
+  .meta-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+
+  .meta-item__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .meta-item__value {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .meta-item__value--mono {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .addr {
+    cursor: help;
+    border-bottom: 1px dotted var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .arrow-separator {
+    color: var(--text-dim);
+    padding: 0 4px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+
+  .badge--timeboost {
+    background: var(--burn-dim);
+    color: var(--burn);
+  }
+
+  /* ============ KPI ROW ============ */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .kpi-card__value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kpi-card__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .kpi-card__label .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  /* ============ SECTION CARD ============ */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+  }
+
+  .section-label .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* ============ TRACE TREE (nested HTML) ============ */
+  .trace-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .trace-node {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--unclassified);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+
+  .trace-node:hover { background: var(--border); }
+
+  /* Depth indentation */
+  .trace-node[data-depth="0"] { margin-left: 0; }
+  .trace-node[data-depth="1"] { margin-left: 28px; }
+  .trace-node[data-depth="2"] { margin-left: 56px; }
+  .trace-node[data-depth="3"] { margin-left: 84px; }
+  .trace-node[data-depth="4"] { margin-left: 112px; }
+
+  /* Action-kind border colors */
+  .trace-node--swap { border-left-color: var(--swap); }
+  .trace-node--transfer { border-left-color: var(--transfer); }
+  .trace-node--eth-transfer { border-left-color: var(--eth-transfer); }
+  .trace-node--mint { border-left-color: var(--mint); }
+  .trace-node--burn { border-left-color: var(--burn); }
+  .trace-node--liquidation { border-left-color: var(--liquidation); }
+  .trace-node--flashloan { border-left-color: var(--flashloan); }
+  .trace-node--batch { border-left-color: var(--batch); }
+  .trace-node--revert { border-left-color: var(--revert); opacity: 0.7; }
+
+  .trace-idx {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  .action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .action-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .action-badge--swap { background: var(--swap-dim); color: var(--swap); }
+  .action-badge--transfer { background: var(--transfer-dim); color: var(--transfer); }
+  .action-badge--eth-transfer { background: var(--eth-transfer-dim); color: var(--eth-transfer); }
+  .action-badge--mint { background: var(--mint-dim); color: var(--mint); }
+  .action-badge--burn { background: var(--burn-dim); color: var(--burn); }
+  .action-badge--liquidation { background: var(--liquidation-dim); color: var(--liquidation); }
+  .action-badge--flashloan { background: var(--flashloan-dim); color: var(--flashloan); }
+  .action-badge--batch { background: var(--batch-dim); color: var(--batch); }
+  .action-badge--unclassified { background: var(--unclassified-dim); color: var(--unclassified); }
+  .action-badge--revert { background: var(--revert-dim); color: var(--revert); }
+
+  .trace-detail {
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .trace-detail code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .trace-detail .amount {
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  .trace-detail .token {
+    font-weight: 600;
+  }
+
+  .trace-detail .dim {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* ============ LEGEND ============ */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  /* ============ MERMAID CONTAINER ============ */
+  .mermaid-wrap {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 24px;
+    overflow: auto;
+  }
+
+  .mermaid-wrap .mermaid {
+    display: flex;
+    justify-content: center;
+    transition: transform 0.2s ease;
+    transform-origin: top center;
+  }
+
+  .zoom-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 2px;
+    z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
+  }
+
+  .zoom-controls button {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .zoom-controls button:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .mermaid-wrap { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .mermaid-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .mermaid-wrap::-webkit-scrollbar-track { background: transparent; }
+  .mermaid-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .mermaid-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  .mermaid-wrap.is-zoomed { cursor: grab; }
+  .mermaid-wrap.is-panning { cursor: grabbing; user-select: none; }
+
+  /* Mermaid SVG overrides */
+  .mermaid .nodeLabel {
+    font-family: var(--font-body) !important;
+    font-size: 14px !important;
+  }
+
+  .mermaid .edgeLabel {
+    font-family: var(--font-mono) !important;
+    font-size: 11px !important;
+  }
+
+  .mermaid .node rect,
+  .mermaid .node circle,
+  .mermaid .node polygon {
+    stroke-width: 1.5px !important;
+  }
+
+  .mermaid .edge-pattern-solid { stroke-width: 1.5px !important; }
+
+  /* Arrow style legend */
+  .arrow-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .arrow-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .arrow-legend-item .arrow-sample {
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  /* ============ DATA TABLE ============ */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .data-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .data-table th {
+    background: var(--surface2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--border-bright);
+    white-space: nowrap;
+  }
+
+  .data-table th.num { text-align: right; }
+
+  .data-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .data-table tbody tr:last-child td { border-bottom: none; }
+
+  .data-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  @media (prefers-color-scheme: light) {
+    .data-table tbody tr:nth-child(even) {
+      background: rgba(0, 0, 0, 0.02);
+    }
+  }
+
+  .data-table tbody tr {
+    transition: background 0.15s ease;
+    animation: fadeUp 0.35s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.04s);
+  }
+
+  .data-table tbody tr:hover {
+    background: var(--border);
+  }
+
+  .amount {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .amount--out { color: var(--revert); }
+  .amount--in { color: var(--transfer); }
+
+  .token {
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  .token-addr {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    display: block;
+    margin-top: 1px;
+  }
+
+  .protocol {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .swap-arrow {
+    color: var(--swap);
+    font-weight: 700;
+    padding: 0 4px;
+  }
+
+  .data-table small {
+    display: block;
+    color: var(--text-dim);
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  .data-table tfoot td {
+    background: var(--surface2);
+    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border-top: 2px solid var(--border-bright);
+    border-bottom: none;
+    padding: 12px 14px;
+    color: var(--text-dim);
+  }
+
+  /* ============ ADDRESS TABLE ============ */
+  .addr-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .addr-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .addr-table th {
+    background: var(--surface2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-bright);
+  }
+
+  .addr-table td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .addr-table tbody tr:last-child td { border-bottom: none; }
+  .addr-table .role { color: var(--text-dim); font-size: 10px; }
+
+  /* ============ COLLAPSIBLE ============ */
+  details.collapsible {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  details.collapsible summary {
+    padding: 12px 18px;
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    transition: background 0.15s ease;
+  }
+
+  details.collapsible summary:hover { background: var(--surface-elevated); }
+  details.collapsible summary::-webkit-details-marker { display: none; }
+
+  details.collapsible summary::before {
+    content: '▸';
+    font-size: 11px;
+    transition: transform 0.15s ease;
+  }
+
+  details.collapsible[open] summary::before { transform: rotate(90deg); }
+
+  details.collapsible .collapsible__body {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-dim);
+  }
+
+  details.collapsible .collapsible__body code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 768px) {
+    body { padding: 16px; }
+    h1 { font-size: 24px; }
+    .hero { padding: 20px; }
+    .meta-grid { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .trace-node[data-depth="1"] { margin-left: 16px; }
+    .trace-node[data-depth="2"] { margin-left: 32px; }
+    .trace-node[data-depth="3"] { margin-left: 48px; }
+    .trace-node[data-depth="4"] { margin-left: 64px; }
+    .mermaid-wrap { padding: 16px 12px; }
+    .data-table th,
+    .data-table td { padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<h1 class="animate" style="--i:0">Transaction Analysis</h1>
+<p class="subtitle animate" style="--i:1">ethereum mainnet &mdash; block 19,234,567</p>
+
+<div class="container">
+
+  <!-- ===== Section A: Hero (Transaction Overview) ===== -->
+  <div class="hero animate" style="--i:2">
+    <div class="hero-label"><span class="dot"></span> Transaction</div>
+    <div class="tx-hash-row">
+      <span class="tx-hash">0x8a3b7d...e4f2c1</span>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText('0x8a3b7d1234567890abcdef1234567890abcdef1234567890abcdef12e4f2c1')">Copy</button>
+    </div>
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="meta-item__label">Block</div>
+        <div class="meta-item__value">19,234,567</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-item__label">From &rarr; To</div>
+        <div class="meta-item__value meta-item__value--mono">
+          <span class="addr" title="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">0xd8dA...6045</span>
+          <span class="arrow-separator">&rarr;</span>
+          <span class="addr" title="0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45">0x68b3...Fc45</span>
+        </div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-item__label">Gas Used</div>
+        <div class="meta-item__value meta-item__value--mono">245,312</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-item__label">Gas Price</div>
+        <div class="meta-item__value meta-item__value--mono">32.4 Gwei</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-item__label">Tx Cost</div>
+        <div class="meta-item__value meta-item__value--mono">0.00795 ETH</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-item__label">Status</div>
+        <div class="meta-item__value"><span class="badge badge--timeboost">Timeboosted</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Section B: KPI Row (Action Counts) ===== -->
+  <div class="kpi-row animate" style="--i:3">
+    <div class="kpi-card">
+      <div class="kpi-card__value">8</div>
+      <div class="kpi-card__label">Total Actions</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__value" style="color:var(--swap)">3</div>
+      <div class="kpi-card__label"><span class="dot" style="background:var(--swap)"></span> Swaps</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__value" style="color:var(--transfer)">2</div>
+      <div class="kpi-card__label"><span class="dot" style="background:var(--transfer)"></span> Transfers</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__value" style="color:var(--eth-transfer)">2</div>
+      <div class="kpi-card__label"><span class="dot" style="background:var(--eth-transfer)"></span> ETH Sends</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__value" style="color:var(--mint)">1</div>
+      <div class="kpi-card__label"><span class="dot" style="background:var(--mint)"></span> Mints</div>
+    </div>
+  </div>
+
+  <!-- ===== Section C: Call Trace Tree (nested HTML — for < 20 nodes) ===== -->
+  <div class="section animate" style="--i:4">
+    <div class="section-label"><span class="dot" style="background:var(--accent)"></span> Call Trace</div>
+    <div class="trace-tree">
+
+      <div class="trace-node trace-node--batch" data-depth="0">
+        <span class="trace-idx">0</span>
+        <span class="action-badge action-badge--batch">Aggregator</span>
+        <span class="trace-detail">Aggregate via <span class="token">1inch</span> <span class="dim">router 0x1111...1111</span></span>
+      </div>
+
+      <div class="trace-node trace-node--swap" data-depth="1">
+        <span class="trace-idx">1</span>
+        <span class="action-badge action-badge--swap">Swap</span>
+        <span class="trace-detail"><span class="amount">1.500</span> <span class="token">ETH</span> &rarr; <span class="amount">3,012.45</span> <span class="token">USDC</span> <span class="dim">on Uniswap V3</span></span>
+      </div>
+
+      <div class="trace-node trace-node--transfer" data-depth="2">
+        <span class="trace-idx">2</span>
+        <span class="action-badge action-badge--transfer">Transfer</span>
+        <span class="trace-detail"><span class="amount">3,012.45</span> <span class="token">USDC</span> <span class="dim">&rarr;</span> <span class="addr" title="0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45">0x68b3...Fc45</span></span>
+      </div>
+
+      <div class="trace-node trace-node--swap" data-depth="1">
+        <span class="trace-idx">3</span>
+        <span class="action-badge action-badge--swap">Swap</span>
+        <span class="trace-detail"><span class="amount">3,012.45</span> <span class="token">USDC</span> &rarr; <span class="amount">0.842</span> <span class="token">WBTC</span> <span class="dim">on Curve</span></span>
+      </div>
+
+      <div class="trace-node trace-node--eth-transfer" data-depth="1">
+        <span class="trace-idx">4</span>
+        <span class="action-badge action-badge--eth-transfer">ETH Send</span>
+        <span class="trace-detail"><span class="amount">0.005</span> <span class="token">ETH</span> &rarr; <span class="addr" title="0xBuilderAddress">0xBuil...lder</span> <span class="dim">(priority fee)</span></span>
+      </div>
+
+      <div class="trace-node trace-node--mint" data-depth="1">
+        <span class="trace-idx">5</span>
+        <span class="action-badge action-badge--mint">Mint</span>
+        <span class="trace-detail">Mint <span class="amount">0.842</span> <span class="token">WBTC</span> + <span class="amount">1,200</span> <span class="token">USDC</span> <span class="dim">into Uniswap V3 pool</span></span>
+      </div>
+
+      <div class="trace-node trace-node--swap" data-depth="2">
+        <span class="trace-idx">6</span>
+        <span class="action-badge action-badge--swap">Swap</span>
+        <span class="trace-detail"><span class="amount">0.100</span> <span class="token">WBTC</span> &rarr; <span class="amount">4,250.00</span> <span class="token">DAI</span> <span class="dim">on Balancer V2</span></span>
+      </div>
+
+      <div class="trace-node trace-node--eth-transfer" data-depth="1">
+        <span class="trace-idx">7</span>
+        <span class="action-badge action-badge--eth-transfer">ETH Send</span>
+        <span class="trace-detail"><span class="amount">0.002</span> <span class="token">ETH</span> &rarr; <span class="addr" title="0xCoinbaseAddress">0xCoin...base</span> <span class="dim">(coinbase transfer)</span></span>
+      </div>
+
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--swap)"></div> Swap</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--transfer)"></div> Transfer</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--eth-transfer)"></div> ETH Send</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--mint)"></div> Mint</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--burn)"></div> Burn</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--liquidation)"></div> Liquidation</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--flashloan)"></div> FlashLoan</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--batch)"></div> Batch</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--unclassified)"></div> Unclassified</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--revert)"></div> Revert</div>
+    </div>
+  </div>
+
+  <!-- ===== Section C alt: Mermaid Call Trace (for >= 20 nodes) ===== -->
+  <div class="section animate" style="--i:5">
+    <div class="section-label"><span class="dot" style="background:var(--accent)"></span> Call Trace (Mermaid)</div>
+    <div class="mermaid-wrap">
+      <div class="zoom-controls">
+        <button onclick="zoomDiagram(this, 1.2)" title="Zoom in">+</button>
+        <button onclick="zoomDiagram(this, 0.8)" title="Zoom out">&minus;</button>
+        <button onclick="resetZoom(this)" title="Reset zoom">&#8634;</button>
+      </div>
+      <pre class="mermaid">
+        graph TD
+          A["0: Aggregate via 1inch"] ==> B["1: Swap 1.5 ETH → 3012 USDC"]
+          A ==> C["3: Swap 3012 USDC → 0.084 WBTC"]
+          A ==> D["4: Send 0.005 ETH"]
+          A ==> E["5: Mint WBTC+USDC LP"]
+          A ==> G["7: Send 0.002 ETH"]
+
+          B <==> B1["Uniswap V3 Pool"]
+          B --> F["2: Transfer 3012 USDC"]
+
+          C <==> C1["Curve tricrypto"]
+
+          E -.-> E1["Uniswap V3 LP"]
+          E ==> H["6: Swap 0.1 WBTC → 4250 DAI"]
+
+          H <==> H1["Balancer V2"]
+
+          D ==> D1["Builder"]
+          G ==> G1["Coinbase"]
+
+          classDef aggregator fill:#1a1a40,stroke:#818cf8,stroke-width:2px,color:#e2e8f0
+          classDef swap fill:#0e3a4a,stroke:#22d3ee,stroke-width:1.5px,color:#e2e8f0
+          classDef transfer fill:#0e3a20,stroke:#4ade80,stroke-width:1.5px,color:#e2e8f0
+          classDef ethSend fill:#2a1f50,stroke:#a78bfa,stroke-width:1.5px,color:#e2e8f0
+          classDef mint fill:#0e3a2a,stroke:#34d399,stroke-width:1.5px,color:#e2e8f0
+          classDef pool fill:#1a2030,stroke:#94a3b8,stroke-width:1px,color:#94a3b8
+          classDef dest fill:#1a2030,stroke:#64748b,stroke-width:1px,color:#94a3b8
+
+          class A aggregator
+          class B,C,H swap
+          class F transfer
+          class D,G ethSend
+          class E mint
+          class B1,C1,E1,H1 pool
+          class D1,G1 dest
+      </pre>
+    </div>
+
+    <div class="arrow-legend">
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--swap)">&lrarr;</span> Swap (bidirectional value)</div>
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--transfer)">&rarr;</span> Transfer (one-way)</div>
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--eth-transfer)">&rArr;</span> ETH Send / Aggregator (thick)</div>
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--mint)">&rarrw;</span> Mint / Burn (dotted)</div>
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--flashloan)">&harr;</span> FlashLoan (bidirectional)</div>
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--liquidation)">&cross;</span> Liquidation / Revert (cross)</div>
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--batch)">&#9675;&mdash;&#9675;</span> Batch (circle endpoints)</div>
+      <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--unclassified)">&sim;</span> Unclassified (wavy)</div>
+    </div>
+  </div>
+
+  <!-- ===== Section D: Token Flow Table ===== -->
+  <div class="section animate" style="--i:6">
+    <div class="section-label"><span class="dot" style="background:var(--transfer)"></span> Token Flows</div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Action</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Token</th>
+              <th class="num">Amount</th>
+              <th>Protocol</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="--i:7">
+              <td>1</td>
+              <td><span class="action-badge action-badge--swap">Swap</span></td>
+              <td><span class="addr" title="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">0xd8dA...6045</span></td>
+              <td><span class="addr" title="0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640">0x88e6...5640</span></td>
+              <td>
+                <span class="token">ETH</span><span class="swap-arrow">&rarr;</span><span class="token">USDC</span>
+                <span class="token-addr">pool 0x88e6...5640</span>
+              </td>
+              <td class="amount">1.500 &rarr; 3,012.45</td>
+              <td><span class="protocol">Uniswap V3</span></td>
+            </tr>
+            <tr style="--i:8">
+              <td>2</td>
+              <td><span class="action-badge action-badge--transfer">Transfer</span></td>
+              <td><span class="addr" title="0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640">0x88e6...5640</span></td>
+              <td><span class="addr" title="0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45">0x68b3...Fc45</span></td>
+              <td>
+                <span class="token">USDC</span>
+                <span class="token-addr">0xA0b8...4321</span>
+              </td>
+              <td class="amount">3,012.45</td>
+              <td></td>
+            </tr>
+            <tr style="--i:9">
+              <td>3</td>
+              <td><span class="action-badge action-badge--swap">Swap</span></td>
+              <td><span class="addr" title="0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45">0x68b3...Fc45</span></td>
+              <td><span class="addr" title="0xD51a44d3FaE010294C616388b506AcdA1bfAAE46">0xD51a...AE46</span></td>
+              <td>
+                <span class="token">USDC</span><span class="swap-arrow">&rarr;</span><span class="token">WBTC</span>
+                <span class="token-addr">pool 0xD51a...AE46</span>
+              </td>
+              <td class="amount">3,012.45 &rarr; 0.0842</td>
+              <td><span class="protocol">Curve</span></td>
+            </tr>
+            <tr style="--i:10">
+              <td>4</td>
+              <td><span class="action-badge action-badge--eth-transfer">ETH Send</span></td>
+              <td><span class="addr" title="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">0xd8dA...6045</span></td>
+              <td><span class="addr" title="0xBuilderAddress">0xBuil...lder</span></td>
+              <td><span class="token">ETH</span></td>
+              <td class="amount">0.005</td>
+              <td><small>priority fee</small></td>
+            </tr>
+            <tr style="--i:11">
+              <td>5</td>
+              <td><span class="action-badge action-badge--mint">Mint</span></td>
+              <td><span class="addr" title="0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45">0x68b3...Fc45</span></td>
+              <td><span class="addr" title="0xUniV3Pool">0xUniV...Pool</span></td>
+              <td>
+                <span class="token">WBTC</span> + <span class="token">USDC</span>
+                <span class="token-addr">LP position</span>
+              </td>
+              <td class="amount">0.0842 + 1,200</td>
+              <td><span class="protocol">Uniswap V3</span></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">5 token movements across 5 addresses</td>
+              <td></td>
+              <td></td>
+              <td>3 protocols</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Section E: Address Interaction Map ===== -->
+  <div class="addr-table animate" style="--i:12">
+    <table>
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Full Address</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0xd8dA...6045</td>
+          <td>0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045</td>
+          <td class="role">Sender (EOA)</td>
+        </tr>
+        <tr>
+          <td>0x1111...1111</td>
+          <td>0x1111111254EEB25477B68fb85Ed929f73A960582</td>
+          <td class="role">1inch Router</td>
+        </tr>
+        <tr>
+          <td>0x88e6...5640</td>
+          <td>0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640</td>
+          <td class="role">Uniswap V3: ETH/USDC Pool</td>
+        </tr>
+        <tr>
+          <td>0xD51a...AE46</td>
+          <td>0xD51a44d3FaE010294C616388b506AcdA1bfAAE46</td>
+          <td class="role">Curve: tricrypto Pool</td>
+        </tr>
+        <tr>
+          <td>0xBala...Vault</td>
+          <td>0xBA12222222228d8Ba445958a75a0704d566BF2C8</td>
+          <td class="role">Balancer V2 Vault</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/dist/mermaid-layout-elk.esm.min.mjs';
+
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  mermaid.registerLayoutLoaders(elkLayouts);
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    look: 'classic',
+    layout: 'elk',
+    themeVariables: {
+      primaryColor: isDark ? '#1a2236' : '#f1f5f9',
+      primaryBorderColor: isDark ? '#22d3ee' : '#0891b2',
+      primaryTextColor: isDark ? '#e2e8f0' : '#0f172a',
+      secondaryColor: isDark ? '#2a1f50' : '#ede7f6',
+      secondaryBorderColor: isDark ? '#a78bfa' : '#7c3aed',
+      secondaryTextColor: isDark ? '#e2e8f0' : '#0f172a',
+      tertiaryColor: isDark ? '#0e3a20' : '#e8f5e9',
+      tertiaryBorderColor: isDark ? '#4ade80' : '#16a34a',
+      tertiaryTextColor: isDark ? '#e2e8f0' : '#0f172a',
+      lineColor: isDark ? '#64748b' : '#94a3b8',
+      fontSize: '14px',
+      fontFamily: "'Space Grotesk', system-ui, sans-serif",
+    }
+  });
+</script>
+<script>
+  function updateZoomState(wrap) {
+    var target = wrap.querySelector('.mermaid');
+    var zoom = parseFloat(target.dataset.zoom || '1');
+    wrap.classList.toggle('is-zoomed', zoom > 1);
+  }
+
+  function zoomDiagram(btn, factor) {
+    var wrap = btn.closest('.mermaid-wrap');
+    var target = wrap.querySelector('.mermaid');
+    var current = parseFloat(target.dataset.zoom || '1');
+    var next = Math.min(Math.max(current * factor, 0.3), 5);
+    target.dataset.zoom = next;
+    target.style.transform = 'scale(' + next + ')';
+    updateZoomState(wrap);
+  }
+
+  function resetZoom(btn) {
+    var wrap = btn.closest('.mermaid-wrap');
+    var target = wrap.querySelector('.mermaid');
+    target.dataset.zoom = '1';
+    target.style.transform = 'scale(1)';
+    updateZoomState(wrap);
+  }
+
+  document.querySelectorAll('.mermaid-wrap').forEach(function(wrap) {
+    wrap.addEventListener('wheel', function(e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      var target = wrap.querySelector('.mermaid');
+      var current = parseFloat(target.dataset.zoom || '1');
+      var factor = e.deltaY < 0 ? 1.1 : 0.9;
+      var next = Math.min(Math.max(current * factor, 0.3), 5);
+      target.dataset.zoom = next;
+      target.style.transform = 'scale(' + next + ')';
+      updateZoomState(wrap);
+    }, { passive: false });
+
+    var startX, startY, scrollL, scrollT;
+    wrap.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.zoom-controls')) return;
+      var target = wrap.querySelector('.mermaid');
+      if (parseFloat(target.dataset.zoom || '1') <= 1) return;
+      wrap.classList.add('is-panning');
+      startX = e.clientX;
+      startY = e.clientY;
+      scrollL = wrap.scrollLeft;
+      scrollT = wrap.scrollTop;
+    });
+    window.addEventListener('mousemove', function(e) {
+      if (!wrap.classList.contains('is-panning')) return;
+      wrap.scrollLeft = scrollL - (e.clientX - startX);
+      wrap.scrollTop = scrollT - (e.clientY - startY);
+    });
+    window.addEventListener('mouseup', function() {
+      wrap.classList.remove('is-panning');
+    });
+  });
+</script>
+
+</body>
+</html>
