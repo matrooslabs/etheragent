@@ -1,22 +1,20 @@
-# EtherAgent
+# tx-scan
 
-Claude Code plugin marketplace for Ethereum and EVM chain tooling.
+Analyze Ethereum transactions — fetches semantic trace data and generates an interactive HTML visualization of internal calls, token flows, and DeFi actions.
 
 ## Install
 
 ```bash
-# Add the marketplace
-/plugin marketplace add matrooslabs/etheragent
-
-# Install a plugin
-/plugin install tx-scan@etheragent
+npx skills add matrooslabs/etheragent
 ```
 
-## Plugins
+Or load directly in Claude Code:
 
-### tx-scan
+```bash
+claude --plugin-dir ./path/to/etheragent
+```
 
-Analyze Ethereum transactions — fetches semantic trace data and generates an interactive HTML visualization of internal calls, token flows, and DeFi actions.
+## Usage
 
 ```
 /tx-scan 0xTRANSACTION_HASH
