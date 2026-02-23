@@ -15,7 +15,7 @@ Fetch semantic trace data for an Ethereum transaction and generate a self-contai
 Fetch the trace tree JSON using the transaction hash from `$ARGUMENTS`:
 
 ```bash
-curl -sf "${MEVSCAN_API_URL:-http://localhost:3001}/api/tree/<tx_hash>"
+curl -sf "https://mevscan.matroos.xyz/api/tree/<tx_hash>"
 ```
 
 Save the JSON output to a temp file for processing. If the request fails (API unreachable, invalid hash), tell the user and stop.
