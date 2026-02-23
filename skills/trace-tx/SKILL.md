@@ -70,45 +70,55 @@ Only show action types that actually appear.
 
 #### Call Trace Tree
 
-This is the core of the explanation. Render the call tree with ASCII box-drawing characters to show the hierarchy:
+This is the core visualization. Use Unicode box-drawing characters to render a clean, visually distinct tree. Each node gets two lines: a header line with the action label (preceded by a horizontal rule) and a detail line with amounts and flow arrows.
 
 ```
   CALL TRACE
-  ==========
+  ══════════
 
-  [0] Aggregator  Aggregate via 1inch (0x1111...1111)
-   |
-   +--[1] Swap  1.500 ETH -> 3,012.45 USDC  (Uniswap V3)
-   |   |
-   |   +--[2] Transfer  3,012.45 USDC -> 0x68b3...Fc45
-   |
-   +--[3] Swap  3,012.45 USDC -> 0.0842 WBTC  (Curve)
-   |
-   +--[4] ETH Send  0.005 ETH -> 0xBuil...lder  (priority fee)
-   |
-   +--[5] Mint  0.842 WBTC + 1,200 USDC into Uniswap V3 pool
-   |   |
-   |   +--[6] Swap  0.100 WBTC -> 4,250.00 DAI  (Balancer V2)
-   |
-   +--[7] ETH Send  0.002 ETH -> 0xCoin...base  (coinbase transfer)
+  ┌─ #0 Aggregator ─────────────────────────────────────
+  │  Aggregate via 1inch (0x1111...1111)
+  │
+  ├─── #1 Swap ──────────────────────────────────────────
+  │    1.500 ETH ──▶ 3,012.45 USDC  · Uniswap V3
+  │    │
+  │    └─── #2 Transfer ────────────────────────────────
+  │         3,012.45 USDC ──▶ 0x68b3...Fc45
+  │
+  ├─── #3 Swap ──────────────────────────────────────────
+  │    3,012.45 USDC ──▶ 0.0842 WBTC  · Curve
+  │
+  ├─── #4 ETH Send ─────────────────────────────────────
+  │    0.005 ETH ──▶ 0xBuil...lder  · priority fee
+  │
+  ├─── #5 Mint ──────────────────────────────────────────
+  │    0.842 WBTC + 1,200 USDC into Uniswap V3 pool
+  │    │
+  │    └─── #6 Swap ────────────────────────────────────
+  │         0.100 WBTC ──▶ 4,250.00 DAI  · Balancer V2
+  │
+  └─── #7 ETH Send ─────────────────────────────────────
+       0.002 ETH ──▶ 0xCoin...base  · coinbase transfer
 ```
 
-Rules for the tree:
-- `[N]` is the `trace_idx`
-- Action kind comes next as a label (Swap, Transfer, ETH Send, Mint, Burn, etc.)
-- Then a one-line summary of what happened (amounts, tokens, protocol)
-- Use `+--` for child branches and `|` for continuing trunk lines
-- Indent children under their parent
-- For **Swap**: `{amount_in} {token_in} -> {amount_out} {token_out}  ({protocol})`
-- For **Transfer**: `{amount} {token} -> {to_address}`
-- For **EthTransfer**: `{value} ETH -> {to_address}  ({note if coinbase})`
-- For **Mint/Burn**: `{amounts joined by " + "} {tokens} into/from {pool}  ({protocol})`
-- For **Liquidation**: `Liquidate {debtor}: repay {debt_amount} {debt_token} for {collateral_amount} {collateral_token}`
-- For **FlashLoan**: `FlashLoan {amounts} via {protocol}`
-- For **Batch**: `Batch settlement via {solver}`
-- For **Aggregator**: `Aggregate via {protocol} ({address})`
-- For **Revert**: `REVERTED call {from} -> {to}` (mark clearly)
-- For **Unclassified**: `Call {from} -> {to}`
+Formatting rules:
+- **Tree connectors**: Use `┌─` for root, `├───` for middle children, `└───` for last child, `│` for vertical trunk
+- **Header line**: `#N ActionKind` followed by a horizontal dash rule `────` extending to ~55 chars
+- **Detail line**: Indented under the header, showing amounts with `──▶` flow arrows
+- **Protocol/context**: Appended with ` · ` separator (middle dot)
+- **Children**: Indented one level deeper under their parent's `│`
+
+Action format on the detail line:
+- **Swap**: `{amount_in} {token_in} ──▶ {amount_out} {token_out}  · {protocol}`
+- **Transfer**: `{amount} {token} ──▶ {to_address}`
+- **EthTransfer**: `{value} ETH ──▶ {to_address}  · {note if coinbase/priority fee}`
+- **Mint/Burn**: `{amounts joined by " + "} {tokens} into/from {pool}  · {protocol}`
+- **Liquidation**: `Liquidate {debtor}: repay {debt_amount} {debt_token} for {collateral_amount} {collateral_token}`
+- **FlashLoan**: `FlashLoan {amounts} via {protocol}`
+- **Batch**: `Batch settlement via {solver}`
+- **Aggregator**: `Aggregate via {protocol} ({address})`
+- **Revert**: `⚠ REVERTED  {from} ──▶ {to}` (mark prominently)
+- **Unclassified**: `Call {from} ──▶ {to}`
 
 #### Token Flow Table
 
@@ -116,17 +126,48 @@ After the trace tree, show a table of all token movements:
 
 ```
   TOKEN FLOWS
-  ===========
-  #  | Action     | From           | To             | Token      | Amount
-  ---+------------+----------------+----------------+------------+------------------
-  1  | Swap       | 0xd8dA...6045  | 0x88e6...5640  | ETH->USDC  | 1.500 -> 3,012.45
-  2  | Transfer   | 0x88e6...5640  | 0x68b3...Fc45  | USDC       | 3,012.45
-  3  | Swap       | 0x68b3...Fc45  | 0xD51a...AE46  | USDC->WBTC | 3,012.45 -> 0.0842
-  4  | ETH Send   | 0xd8dA...6045  | 0xBuil...lder  | ETH        | 0.005
-  5  | Mint       | 0x68b3...Fc45  | 0xUniV...Pool  | WBTC+USDC  | 0.0842 + 1,200
+  ═══════════
+  #  │ Action     │ From           │ To             │ Token      │ Amount
+  ───┼────────────┼────────────────┼────────────────┼────────────┼──────────────────
+  1  │ Swap       │ 0xd8dA...6045  │ 0x88e6...5640  │ ETH→USDC   │ 1.500 → 3,012.45
+  2  │ Transfer   │ 0x88e6...5640  │ 0x68b3...Fc45  │ USDC       │ 3,012.45
+  3  │ Swap       │ 0x68b3...Fc45  │ 0xD51a...AE46  │ USDC→WBTC  │ 3,012.45 → 0.0842
+  4  │ ETH Send   │ 0xd8dA...6045  │ 0xBuil...lder  │ ETH        │ 0.005
+  5  │ Mint       │ 0x68b3...Fc45  │ 0xUniV...Pool  │ WBTC+USDC  │ 0.0842 + 1,200
+  ───┴────────────┴────────────────┴────────────────┴────────────┴──────────────────
 ```
 
-Use simple ASCII table formatting with `|` separators and `-`+`+` for the header line.
+Use Unicode box-drawing characters (`│`, `┼`, `───`, `┴`) for the table grid.
+
+#### Token Flow Diagram
+
+After the table, render an ASCII flow diagram that shows how tokens moved through the transaction sequentially. Each line is one token movement, and `║` connectors link steps where the output of one action feeds into the next:
+
+```
+  TOKEN FLOW DIAGRAM
+  ══════════════════
+
+  0xd8dA...6045 ═══[ 1.500 ETH ]═══▶ Uniswap V3 Pool
+                                       ║
+  Uniswap V3 Pool ═══[ 3,012.45 USDC ]═══▶ Router (0x68b3...Fc45)
+                                              ║
+  Router ═══[ 3,012.45 USDC ]═══▶ Curve Pool
+                                    ║
+  Curve Pool ═══[ 0.0842 WBTC ]═══▶ Router
+                                      ║
+  Router ═══[ 0.842 WBTC + 1,200 USDC ]═══▶ Uniswap V3 LP
+  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  0xd8dA...6045 ───[ 0.005 ETH ]───▶ Builder (tip)
+  0xd8dA...6045 ───[ 0.002 ETH ]───▶ Coinbase (tip)
+```
+
+Rules for the flow diagram:
+- Each line: `{from} ═══[ {amount} {token} ]═══▶ {to}`
+- Use `═══` (double line) for main value flow and `───` (single line) for side payments (tips, fees)
+- Use `║` connector between lines when one step's output feeds into the next step's input
+- Separate side payments (builder tips, coinbase transfers, fees) below a dashed line `─ ─ ─`
+- Label addresses with their role when known (e.g., "Router", "Builder", "Uniswap V3 Pool")
+- Group connected flows together — if token A comes out of step 1 and goes into step 2, they should be adjacent with a `║` between them
 
 #### Plain English Summary
 
