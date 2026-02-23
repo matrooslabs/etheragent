@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call Trace Diagram — Reference Template</title>
+<!--
+  Reference template for the tx-scan skill: Mermaid call trace tree.
+  Used for complex transactions with 20+ trace nodes where the nested HTML
+  tree becomes unwieldy. Same dark navy palette for consistency.
+  Key patterns demonstrated:
+  - Mermaid graph TD for hierarchical call trace
+  - Action-kind-specific arrow styles (thick, dotted, bidirectional, cross)
+  - classDef per action kind with matching colors
+  - ESM import of Mermaid + @mermaid-js/layout-elk
+  - Zoom controls with scroll-to-zoom and drag-to-pan
+  - Address legend mapping short labels to full addresses
+  - Both dark and light themes
+  - Staggered fade-in, reduced motion respect
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============ THEME (dark-first) ============ */
+  :root {
+    --font-body: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-bright: rgba(255, 255, 255, 0.12);
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+
+    --swap: #22d3ee;
+    --swap-dim: rgba(34, 211, 238, 0.12);
+    --transfer: #4ade80;
+    --transfer-dim: rgba(74, 222, 128, 0.10);
+    --eth-transfer: #a78bfa;
+    --eth-transfer-dim: rgba(167, 139, 250, 0.12);
+    --mint: #34d399;
+    --mint-dim: rgba(52, 211, 153, 0.10);
+    --burn: #fbbf24;
+    --burn-dim: rgba(251, 191, 36, 0.10);
+    --liquidation: #fb7185;
+    --liquidation-dim: rgba(251, 113, 133, 0.10);
+    --flashloan: #c084fc;
+    --flashloan-dim: rgba(192, 132, 252, 0.10);
+    --batch: #818cf8;
+    --batch-dim: rgba(129, 140, 248, 0.10);
+    --unclassified: #94a3b8;
+    --unclassified-dim: rgba(148, 163, 184, 0.08);
+    --revert: #f87171;
+    --revert-dim: rgba(248, 113, 113, 0.10);
+
+    --accent: var(--swap);
+    --accent-dim: var(--swap-dim);
+
+    /* Mermaid node fills (semi-transparent for dark) */
+    --mmd-swap-fill: #0e3a4a;
+    --mmd-transfer-fill: #0e3a20;
+    --mmd-eth-fill: #2a1f50;
+    --mmd-mint-fill: #0e3a2a;
+    --mmd-burn-fill: #3a2e0e;
+    --mmd-liquidation-fill: #3a1525;
+    --mmd-flashloan-fill: #2a1540;
+    --mmd-batch-fill: #1a1a40;
+    --mmd-unclassified-fill: #1a2030;
+    --mmd-revert-fill: #3a1515;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface2: #f1f5f9;
+      --border: rgba(0, 0, 0, 0.07);
+      --border-bright: rgba(0, 0, 0, 0.14);
+      --text: #0f172a;
+      --text-dim: #64748b;
+
+      --swap: #0891b2;
+      --swap-dim: rgba(8, 145, 178, 0.08);
+      --transfer: #16a34a;
+      --transfer-dim: rgba(22, 163, 74, 0.08);
+      --eth-transfer: #7c3aed;
+      --eth-transfer-dim: rgba(124, 58, 237, 0.08);
+      --mint: #059669;
+      --mint-dim: rgba(5, 150, 105, 0.08);
+      --burn: #d97706;
+      --burn-dim: rgba(217, 119, 6, 0.08);
+      --liquidation: #e11d48;
+      --liquidation-dim: rgba(225, 29, 72, 0.08);
+      --flashloan: #9333ea;
+      --flashloan-dim: rgba(147, 51, 234, 0.08);
+      --batch: #4f46e5;
+      --batch-dim: rgba(79, 70, 229, 0.08);
+      --unclassified: #64748b;
+      --unclassified-dim: rgba(100, 116, 139, 0.06);
+      --revert: #dc2626;
+      --revert-dim: rgba(220, 38, 38, 0.08);
+
+      --accent: var(--swap);
+      --accent-dim: var(--swap-dim);
+
+      --mmd-swap-fill: #e0f7fa;
+      --mmd-transfer-fill: #e8f5e9;
+      --mmd-eth-fill: #ede7f6;
+      --mmd-mint-fill: #e0f2f1;
+      --mmd-burn-fill: #fff8e1;
+      --mmd-liquidation-fill: #fce4ec;
+      --mmd-flashloan-fill: #f3e5f5;
+      --mmd-batch-fill: #e8eaf6;
+      --mmd-unclassified-fill: #eceff1;
+      --mmd-revert-fill: #ffebee;
+    }
+  }
+
+  /* ============ RESET + BASE ============ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg);
+    background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--text);
+    font-family: var(--font-body);
+    padding: 40px;
+    min-height: 100vh;
+  }
+
+  /* ============ ANIMATION ============ */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate {
+    animation: fadeUp 0.4s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.06s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .mermaid-wrap .mermaid { transition: none; }
+  }
+
+  /* ============ LAYOUT ============ */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .description {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    max-width: 750px;
+  }
+
+  .description code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ============ MERMAID CONTAINER ============ */
+  .mermaid-wrap {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 24px;
+    overflow: auto;
+    margin-bottom: 24px;
+  }
+
+  .mermaid-wrap .mermaid {
+    display: flex;
+    justify-content: center;
+    transition: transform 0.2s ease;
+    transform-origin: top center;
+  }
+
+  .zoom-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 2px;
+    z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
+  }
+
+  .zoom-controls button {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .zoom-controls button:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .mermaid-wrap { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .mermaid-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .mermaid-wrap::-webkit-scrollbar-track { background: transparent; }
+  .mermaid-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .mermaid-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  .mermaid-wrap.is-zoomed { cursor: grab; }
+  .mermaid-wrap.is-panning { cursor: grabbing; user-select: none; }
+
+  /* ============ MERMAID SVG OVERRIDES ============ */
+  .mermaid .nodeLabel {
+    font-family: var(--font-body) !important;
+    font-size: 14px !important;
+  }
+
+  .mermaid .edgeLabel {
+    font-family: var(--font-mono) !important;
+    font-size: 11px !important;
+  }
+
+  .mermaid .node rect,
+  .mermaid .node circle,
+  .mermaid .node polygon {
+    stroke-width: 1.5px !important;
+  }
+
+  .mermaid .edge-pattern-solid { stroke-width: 1.5px !important; }
+
+  /* ============ LEGEND ============ */
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  /* Arrow style legend */
+  .arrow-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .arrow-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .arrow-legend-item .arrow-sample {
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  /* ============ ADDRESS TABLE ============ */
+  .addr-table {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .addr-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .addr-table th {
+    background: var(--surface2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-bright);
+  }
+
+  .addr-table td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .addr-table tbody tr:last-child td { border-bottom: none; }
+  .addr-table .role { color: var(--text-dim); font-size: 10px; }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 768px) {
+    body { padding: 16px; }
+    h1 { font-size: 22px; }
+    .mermaid-wrap { padding: 16px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <h1 class="animate" style="--i:0">Call Trace</h1>
+  <p class="subtitle animate" style="--i:1">tx 0x8a3b7d...e4f2c1 &mdash; 24 trace nodes</p>
+
+  <p class="description animate" style="--i:2">
+    Complex multi-hop swap through a DEX aggregator. The sender routes <code>ETH</code> through
+    multiple pools to acquire <code>WBTC</code> and <code>DAI</code>, with a liquidity position
+    minted along the way. Arrow styles encode the action type at a glance.
+  </p>
+
+  <div class="legend animate" style="--i:3">
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--swap)"></div> Swap</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--transfer)"></div> Transfer</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--eth-transfer)"></div> ETH Send</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--mint)"></div> Mint</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--burn)"></div> Burn</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--flashloan)"></div> FlashLoan</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--liquidation)"></div> Liquidation</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--batch)"></div> Batch</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--revert)"></div> Revert</div>
+  </div>
+
+  <div class="mermaid-wrap animate" style="--i:4">
+    <div class="zoom-controls">
+      <button onclick="zoomDiagram(this, 1.2)" title="Zoom in">+</button>
+      <button onclick="zoomDiagram(this, 0.8)" title="Zoom out">&minus;</button>
+      <button onclick="resetZoom(this)" title="Reset zoom">&#8634;</button>
+    </div>
+    <pre class="mermaid">
+      graph TD
+        A["0: Aggregate via 1inch"] ==> B["1: Swap 1.5 ETH → 3012 USDC"]
+        A ==> C["3: Swap 3012 USDC → 0.084 WBTC"]
+        A ==> D["4: Send 0.005 ETH"]
+        A ==> E["5: Mint WBTC+USDC LP"]
+        A ==> G["7: Send 0.002 ETH"]
+
+        B <==> B1["Uniswap V3 Pool"]
+        B --> F["2: Transfer 3012 USDC"]
+
+        C <==> C1["Curve tricrypto"]
+
+        E -.-> E1["Uniswap V3 LP"]
+        E ==> H["6: Swap 0.1 WBTC → 4250 DAI"]
+
+        H <==> H1["Balancer V2"]
+
+        D ==> D1["Builder"]
+        G ==> G1["Coinbase"]
+
+        classDef aggregator fill:#1a1a40,stroke:#818cf8,stroke-width:2px,color:#e2e8f0
+        classDef swap fill:#0e3a4a,stroke:#22d3ee,stroke-width:1.5px,color:#e2e8f0
+        classDef transfer fill:#0e3a20,stroke:#4ade80,stroke-width:1.5px,color:#e2e8f0
+        classDef ethSend fill:#2a1f50,stroke:#a78bfa,stroke-width:1.5px,color:#e2e8f0
+        classDef mint fill:#0e3a2a,stroke:#34d399,stroke-width:1.5px,color:#e2e8f0
+        classDef pool fill:#1a2030,stroke:#94a3b8,stroke-width:1px,color:#94a3b8
+        classDef dest fill:#1a2030,stroke:#64748b,stroke-width:1px,color:#94a3b8
+
+        class A aggregator
+        class B,C,H swap
+        class F transfer
+        class D,G ethSend
+        class E mint
+        class B1,C1,E1,H1 pool
+        class D1,G1 dest
+    </pre>
+  </div>
+
+  <!-- Arrow style legend -->
+  <div class="arrow-legend animate" style="--i:5">
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--swap)">⟺</span> Swap (bidirectional value)</div>
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--transfer)">→</span> Transfer (one-way)</div>
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--eth-transfer)">⇒</span> ETH Send / Aggregator (thick)</div>
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--mint)">⤑</span> Mint / Burn (dotted)</div>
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--flashloan)">⟷</span> FlashLoan (bidirectional)</div>
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--liquidation)">⤫</span> Liquidation / Revert (cross)</div>
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--batch)">○—○</span> Batch (circle endpoints)</div>
+    <div class="arrow-legend-item"><span class="arrow-sample" style="color:var(--unclassified)">∿</span> Unclassified (wavy)</div>
+  </div>
+
+  <!-- Address reference -->
+  <div class="addr-table animate" style="--i:6">
+    <table>
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Full Address</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0xd8dA...6045</td>
+          <td>0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045</td>
+          <td class="role">Sender (EOA)</td>
+        </tr>
+        <tr>
+          <td>0x1111...1111</td>
+          <td>0x1111111254EEB25477B68fb85Ed929f73A960582</td>
+          <td class="role">1inch Router</td>
+        </tr>
+        <tr>
+          <td>0x88e6...5640</td>
+          <td>0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640</td>
+          <td class="role">Uniswap V3: ETH/USDC Pool</td>
+        </tr>
+        <tr>
+          <td>0xD51a...AE46</td>
+          <td>0xD51a44d3FaE010294C616388b506AcdA1bfAAE46</td>
+          <td class="role">Curve: tricrypto Pool</td>
+        </tr>
+        <tr>
+          <td>0xBala...Vault</td>
+          <td>0xBA12222222228d8Ba445958a75a0704d566BF2C8</td>
+          <td class="role">Balancer V2 Vault</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/dist/mermaid-layout-elk.esm.min.mjs';
+
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  mermaid.registerLayoutLoaders(elkLayouts);
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    look: 'classic',
+    layout: 'elk',
+    themeVariables: {
+      primaryColor: isDark ? '#1a2236' : '#f1f5f9',
+      primaryBorderColor: isDark ? '#22d3ee' : '#0891b2',
+      primaryTextColor: isDark ? '#e2e8f0' : '#0f172a',
+      secondaryColor: isDark ? '#2a1f50' : '#ede7f6',
+      secondaryBorderColor: isDark ? '#a78bfa' : '#7c3aed',
+      secondaryTextColor: isDark ? '#e2e8f0' : '#0f172a',
+      tertiaryColor: isDark ? '#0e3a20' : '#e8f5e9',
+      tertiaryBorderColor: isDark ? '#4ade80' : '#16a34a',
+      tertiaryTextColor: isDark ? '#e2e8f0' : '#0f172a',
+      lineColor: isDark ? '#64748b' : '#94a3b8',
+      fontSize: '14px',
+      fontFamily: "'Space Grotesk', system-ui, sans-serif",
+    }
+  });
+</script>
+<script>
+  function updateZoomState(wrap) {
+    var target = wrap.querySelector('.mermaid');
+    var zoom = parseFloat(target.dataset.zoom || '1');
+    wrap.classList.toggle('is-zoomed', zoom > 1);
+  }
+
+  function zoomDiagram(btn, factor) {
+    var wrap = btn.closest('.mermaid-wrap');
+    var target = wrap.querySelector('.mermaid');
+    var current = parseFloat(target.dataset.zoom || '1');
+    var next = Math.min(Math.max(current * factor, 0.3), 5);
+    target.dataset.zoom = next;
+    target.style.transform = 'scale(' + next + ')';
+    updateZoomState(wrap);
+  }
+
+  function resetZoom(btn) {
+    var wrap = btn.closest('.mermaid-wrap');
+    var target = wrap.querySelector('.mermaid');
+    target.dataset.zoom = '1';
+    target.style.transform = 'scale(1)';
+    updateZoomState(wrap);
+  }
+
+  document.querySelectorAll('.mermaid-wrap').forEach(function(wrap) {
+    // Scroll-to-zoom (Ctrl/Cmd + wheel)
+    wrap.addEventListener('wheel', function(e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      var target = wrap.querySelector('.mermaid');
+      var current = parseFloat(target.dataset.zoom || '1');
+      var factor = e.deltaY < 0 ? 1.1 : 0.9;
+      var next = Math.min(Math.max(current * factor, 0.3), 5);
+      target.dataset.zoom = next;
+      target.style.transform = 'scale(' + next + ')';
+      updateZoomState(wrap);
+    }, { passive: false });
+
+    // Drag-to-pan
+    var startX, startY, scrollL, scrollT;
+    wrap.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.zoom-controls')) return;
+      var target = wrap.querySelector('.mermaid');
+      if (parseFloat(target.dataset.zoom || '1') <= 1) return;
+      wrap.classList.add('is-panning');
+      startX = e.clientX;
+      startY = e.clientY;
+      scrollL = wrap.scrollLeft;
+      scrollT = wrap.scrollTop;
+    });
+    window.addEventListener('mousemove', function(e) {
+      if (!wrap.classList.contains('is-panning')) return;
+      wrap.scrollLeft = scrollL - (e.clientX - startX);
+      wrap.scrollTop = scrollT - (e.clientY - startY);
+    });
+    window.addEventListener('mouseup', function() {
+      wrap.classList.remove('is-panning');
+    });
+  });
+</script>
+
+</body>
+</html>

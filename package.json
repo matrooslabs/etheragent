@@ -1,0 +1,16 @@
+{
+  "name": "etheragent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Claude Code plugin marketplace",
+  "scripts": {
+    "build": "turbo run build",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
