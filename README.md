@@ -4,9 +4,11 @@ Analyze Ethereum transactions — fetches semantic trace data and generates an i
 
 ## Screenshots
 
-![Transaction overview, KPI summary, and call trace](image.png)
+![Transaction overview, KPI summary, and call trace](image1.png)
 
 ![Token flows and address interactions](image2.png)
+
+![Token flow diagram and detailed trace](image3.png)
 
 ## Install
 
