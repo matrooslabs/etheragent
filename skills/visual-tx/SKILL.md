@@ -45,11 +45,11 @@ Gather every address that appears as a `from`, `to`, `recipient`, `pool`, `liqui
 ### 3. Generate the HTML
 
 Read the reference template and patterns before generating:
-- Read `./templates/architecture.html` for the card/section layout patterns
+- Read `./templates/reference.html` for all layout patterns (hero card, KPI row, trace tree, data table, Mermaid diagram, zoom controls)
 - Read `./references/css-patterns.md` for theming, depth tiers, animations, and table styles
 - Read `./references/libraries.md` if using Mermaid for the call tree diagram
 
-The HTML page should have these sections:
+The HTML page should have these sections only:
 
 ---
 
@@ -95,7 +95,7 @@ This is the core visualization. Two approaches depending on complexity:
 - Color-coded by action type using `classDef`
 - Edges show the parent-child call relationship
 - Include zoom controls (+/−/reset) — see the zoom pattern in css-patterns.md
-- Read `./templates/mermaid-flowchart.html` for the Mermaid setup pattern
+- See the Mermaid section in `./templates/reference.html` for the setup pattern
 
 ---
 
@@ -115,7 +115,7 @@ A data table showing every token movement in the transaction:
 
 For **Swap** actions, show two rows or a combined row: token_in amount → token_out amount.
 
-Use the data table patterns from `./templates/data-table.html`:
+Use the data table patterns from `./templates/reference.html`:
 - Sticky header
 - Alternating row backgrounds
 - Status-colored action badges
@@ -133,6 +133,8 @@ If the transaction involves 3 or more unique addresses, show a summary of intera
 This section helps answer "who interacted with whom and how."
 
 ---
+
+Do not add additional section not mentioned.
 
 ### 4. Style
 
